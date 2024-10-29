@@ -1,0 +1,30 @@
+# Adicione dentro do bloco server { } existente
+location /webhook {
+    # Redirecionar requisições GET para documentação
+    if ($request_method = GET) {
+        rewrite ^/webhook/?$ /webhook/docs.php last;
+    }
+    
+    # Permitir apenas POST com JSON para webhook/index.php
+    if ($request_method = POST) {
+        if ($content_type !~ "application/json") {
+            return 400;
+        }
+        rewrite ^/webhook/?$ /webhook/index.php last;
+    }
+
+    # Processar PHP
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+    }
+}
+
+# Remover extensão .php das URLs
+location / {
+    try_files $uri $uri/ /index.php?$query_string;
+    
+    if (!-e $request_filename){
+        rewrite ^(.+)$ /$1.php last;
+    }
+}
